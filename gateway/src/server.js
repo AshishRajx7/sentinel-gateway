@@ -17,8 +17,8 @@ app.use(cors());
 app.use(helmet());
 app.use(express.json());
 app.use(rateLimiter); 
-app.use("/api", gatewayRoutes);
 app.use(metricsMiddleware);
+app.use("/api", gatewayRoutes);
 
 app.use((req, res, next) => {
   req.traceId = uuidv4();
