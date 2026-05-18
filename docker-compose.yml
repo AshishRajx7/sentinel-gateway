@@ -1,0 +1,98 @@
+version: "3.9"
+
+services:
+  gateway:
+    build: ./gateway
+    container_name: sentinel-gateway
+
+    ports:
+      - "8000:8000"
+
+    env_file:
+      - ./gateway/.env
+
+    depends_on:
+      - redis
+      - otel-collector
+
+    networks:
+      - sentinel-network
+
+  redis:
+    image: redis:7-alpine
+
+    container_name: sentinel-redis
+
+
+    networks:
+      - sentinel-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+
+    container_name: sentinel-jaeger
+
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+
+    networks:
+      - sentinel-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+
+    container_name: sentinel-otel-collector
+
+    command:
+      - "--config=/etc/otel-collector.yml"
+
+    volumes:
+      - ./observability/otel/otel-collector.yml:/etc/otel-collector.yml
+
+    ports:
+      - "4318:4318"
+      - "9464:9464"
+
+    depends_on:
+      - jaeger
+
+    networks:
+      - sentinel-network
+
+  prometheus:
+    image: prom/prometheus
+
+    container_name: sentinel-prometheus
+
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+
+    ports:
+      - "9090:9090"
+
+    depends_on:
+      - otel-collector
+
+    networks:
+      - sentinel-network
+
+  grafana:
+    image: grafana/grafana-oss
+
+    container_name: sentinel-grafana
+
+    ports:
+      - "3000:3000"
+
+    depends_on:
+      - prometheus
+
+    networks:
+      - sentinel-network
+
+networks:
+  sentinel-network:
